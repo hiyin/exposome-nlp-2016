@@ -125,10 +125,10 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
                             extracted_phrase.append(phrase1.group())
 
                     # Eliminate duplicate/overlap phrases use any()
-                    if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
-                        extracted_phrase.append(phrase1.group())
-                    if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
-                        extracted_phrase.append(phrase2.group())
+                    # if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
+                    #     extracted_phrase.append(phrase1.group())
+                    # if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
+                    #     extracted_phrase.append(phrase2.group())
 
         extracted_phrase_dict[pmid] = extracted_phrase
 
