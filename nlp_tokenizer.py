@@ -120,6 +120,7 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
                     phrase1 = re.search('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
                     phrase2 = re.search('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
                     # Eliminate duplicate/overlap phrases use any()
+                    # Use and in condition gives best result 191
                     if (phrase1 and ((not any(phrase1.group() in phrase for phrase in extracted_phrase)) and (not any(phrase in phrase1.group() for phrase in extracted_phrase)))):
                         extracted_phrase.append(phrase1.group())
 
