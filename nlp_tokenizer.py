@@ -119,16 +119,13 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
 
                     phrase1 = re.search('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
                     phrase2 = re.search('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
-
-                    for phrase in extracted_phrase:
-                        if not (phrase.find(phrase1) and phrase1.find(phrase)):
+                    # Eliminate duplicate/overlap phrases use any()
+                    if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
+                        if (not any(phrase in phrase1.group() for phrase in extracted_phrase)):
                             extracted_phrase.append(phrase1.group())
 
-                    # Eliminate duplicate/overlap phrases use any()
-                    # if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
-                    #     extracted_phrase.append(phrase1.group())
-                    # if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
-                    #     extracted_phrase.append(phrase2.group())
+                    if (phrase2 and ((not any(phrase2.group() in phrase for phrase in extracted_phrase)) or (not any(phrase in phrase2.group() for phrase in extracted_phrase)))):
+                        extracted_phrase.append(phrase2.group())
 
         extracted_phrase_dict[pmid] = extracted_phrase
 
@@ -143,6 +140,10 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
 
     print(extracted_phrase_dict)
     return extracted_phrase_dict
+
+def deduplicate(iterable):
+    for i in iterable:
+        return
 
 def word_tokenizer(record_dict):
     word_dict = {}
