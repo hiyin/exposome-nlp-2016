@@ -16,7 +16,7 @@ results = search('Parkinson AND Pesticide')
 id_list = results['IdList']
 records = fetch_medline(id_list)
 
-diseases = ["pd", "parkinson", "parkin"] # becare of "updated"
+diseases = ["PD", "parkinson", "parkin"] # becare of "updated"
 # diseases = ["parkinson", "parkin"]
 
 
@@ -61,9 +61,8 @@ def filter_sent(sent_dict, chemicals):
 
             for chemical in chemicals:
                 for disease in diseases:
-                    match = re.search(chemical, token.lower())
-
-                    dmatch = re.search(disease, token.lower())
+                    match = re.search(chemical, token, flags=re.IGNORECASE)
+                    dmatch = re.search(disease, token, flags=re.IGNORECASE)
                     # if (match and disease in token.lower()):
 
                     if ((match and dmatch) and (token not in filtered_tokens)):
@@ -107,6 +106,10 @@ def filter_sent(sent_dict, chemicals):
 
 
     return filtered_sent_dict
+
+def match_word(input_string, string_list):
+    words = re.findall(r'\w+', input_string)
+    return [True for word in words if word in string_list]
 
 
 def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
