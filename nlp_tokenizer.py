@@ -48,12 +48,11 @@ def sent_tokenizer(record_dict):
 def filter_sent(sent_dict, chemicals):
     found_chemicals = []
     filtered_sent_dict = {}
-
-
+    filtered_cooccur = []
     for pmid, sent_tokens in sent_dict.items():
         filtered_tokens = []
-
         for token in sent_tokens:
+
             # match = re.search('parkinson+', token.lower)
             # print('Detected match in' + match)
             # ToDo: What about Parkinson abbrev e.g. PD, variation and implied associations etc
@@ -69,14 +68,13 @@ def filter_sent(sent_dict, chemicals):
                     # Method 1 (prefered behaviour):
                     dmatch = re.search(disease, token, flags=re.IGNORECASE)
                     cmatch = re.search(chemical, token, flags=re.IGNORECASE)
-
                     if (cmatch and dmatch) and (token not in filtered_tokens):
-
 
                         # print(match.group())
                             found_chemicals.append(chemical)
 
                             filtered_tokens.append(token)
+                            filtered_cooccur.append((cmatch.group(), dmatch.group()))
 
                     else:
                         continue
@@ -94,6 +92,7 @@ def filter_sent(sent_dict, chemicals):
         filtered_sent_dict[pmid] = filtered_tokens
 
     print(set(found_chemicals))
+    print("The number of co-occurence(s) is: %d with unique number: %d" % (len(filtered_cooccur), len(set(filtered_cooccur))))
 
 
     length_filteredsent = 0
@@ -104,6 +103,22 @@ def filter_sent(sent_dict, chemicals):
             length_filteredarticle += 1
     print("The number of sentences after filtering is %s" % length_filteredsent)
     print("The number of PubMed literature after filtering is %s" % length_filteredarticle)
+
+    filtered_coocur_freq = {}
+    for cooccur in filtered_cooccur:
+        if cooccur not in filtered_coocur_freq:
+            filtered_coocur_freq[cooccur] = 1
+        else:
+            filtered_coocur_freq[cooccur] += 1
+    print("The frequency of all of co-occurrence (un-unique) is: ")
+    print(filtered_coocur_freq)
+    # print(sorted(filtered_coocur_freq, key=filtered_coocur_freq.__getitem__))
+
+    print("The set of unique co-occureence is: ")
+    print(set(filtered_cooccur))
+
+
+
 
 
     print(filtered_sent_dict)
