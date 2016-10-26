@@ -205,8 +205,8 @@ def filtered_word_tokenizer(filtered_sent_dict):
 def extract_causation(extracted_relations_dict):
     extracted_cause_dict = {}
     for pmid, sent_tokens in extracted_relations_dict.items():
-        # extracted_cause = {}
         for token in sent_tokens:
+            # Trial new puctword tokenizer to avoid "'s" occurences
             nonstop_words = [word for word in punctword_tokenizer.tokenize(token) if word.lower() not in stop_words]
             # n = nltk.chunk.ne_chunk(pos_tagged_words)
             # n.draw()
