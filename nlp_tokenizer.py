@@ -4,8 +4,9 @@ from entrez_search import search, fetch_medline
 import re
 import inflect
 from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, WordNetLemmatizer
 inflect = inflect.engine()
-
+lemmatize = WordNetLemmatizer()
 import nltk
 # nltk.download('all', halt_on_error=False)
 # Solve above downloader issue https://github.com/nltk/nltk/issues/1283
@@ -232,13 +233,12 @@ def extract_causation(extracted_relations):
         extracted_cause = []
         for token in sent_tokens:
             nonstop_words = [word for word in word_tokenize(token) if word not in stopwords.words('english')]
-            tagged_word = pos_tag(nonstop_words)
-            print(tagged_word)
-            for word, tag in tagged_word:
-                if re.match("VB", tag):
-
-                    extracted_cause.append(word)
-
+            pos_tagged_words = pos_tag(nonstop_words)
+            # n = nltk.chunk.ne_chunk(pos_tagged_words)
+            # n.draw()
+            for word, tag in pos_tagged_words:
+                extracted_cause.append(word)
+        
         extracted_cause_dict[pmid] = extracted_cause
     print("The extracted_cause_dict is: ")
     print(extracted_cause_dict)
