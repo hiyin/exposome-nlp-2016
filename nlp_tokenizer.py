@@ -61,16 +61,21 @@ def filter_sent(sent_dict, chemicals):
 
             for chemical in chemicals:
                 for disease in diseases:
-                    match = re.search(chemical, token, flags=re.IGNORECASE)
-                    dmatch = re.search(disease, token, flags=re.IGNORECASE)
-                    # if (match and disease in token.lower()):
+                    if not disease.isupper():
+                        continue
+                    else:
+                        dmatch = re.search(r"\bdisease\b", token)
 
-                    if ((match and dmatch) and (token not in filtered_tokens)):
+                    dmatch = re.search(disease, token, flags=re.IGNORECASE)
+                    cmatch = re.search(chemical, token, flags=re.IGNORECASE)
+
+                    if (cmatch and dmatch) and (token not in filtered_tokens):
 
                         # print(match.group())
-                        found_chemicals.append(chemical)
+                            found_chemicals.append(chemical)
 
-                        filtered_tokens.append(token)
+                            filtered_tokens.append(token)
+
                     else:
                         continue
 
@@ -120,12 +125,20 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
             for chemical in chemicals:
                 for disease in diseases:
 
+                    if not disease.isupper():
+                        continue
+                    else:
+                        phrase1 = re.search(r'%s(.*)\b%s\b' % (chemical, disease), token, flags=re.IGNORECASE)
+                        phrase2 = re.search(r'\b%s\b(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
+
+
                     phrase1 = re.search('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
                     phrase2 = re.search('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
                     # Eliminate duplicate/overlap phrases use any()
                     if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
                         if (not any(phrase in phrase1.group() for phrase in extracted_phrase)):
                             extracted_phrase.append(phrase1.group())
+
 
                     if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
                         if (not any(phrase in phrase2.group() for phrase in extracted_phrase)):
