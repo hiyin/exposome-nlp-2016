@@ -10,9 +10,22 @@ import pandas
 
 data = pandas.read_csv('/Users/dyin/Desktop/HaBIC/common_sql.csv', header=0)
 
-chemicals = data["Chemical name"].tolist()
-chemicals = [chemical.lower() for chemical in chemicals] + ["pesticide"]
-results = search('Parkinson AND Pesticide')
+agent_mesh = ["Acaricides",
+"Chemosterilants",
+"Fungicides",
+"Herbicides",
+"Defoliants",
+"Insect Repellents",
+"Insecticides",
+"Molluscacides",
+"Pesticide Residues",
+"Pesticide Synergists",
+"Rodenticides",
+"Pesticides"]
+chemicals = data["Chemical name"].tolist() + agent_mesh
+# chemicals = [chemical.lower() for chemical in chemicals] + ["pesticide"]
+
+results = search('Parkinson AND Pesticides')
 id_list = results['IdList']
 records = fetch_medline(id_list)
 # Snomed_terms
@@ -80,24 +93,21 @@ def filter_sent(sent_dict, chemicals):
 
             for chemical in chemicals:
                 for disease in diseases:
-                    # Method 2:
-                    if not disease.isupper():
-                        continue
-                    else:
-                        dmatch_cap = re.search(r"\bdisease\b", token)
+                    # # Method 2:
+                    # if not disease.isupper():
+                    #     continue
+                    # else:
+                    #     dmatch2 = re.search(r"\bdisease\b", token)
                     # Method 1 (prefered behaviour):
                     dmatch = re.search(disease, token, flags=re.IGNORECASE)
                     cmatch = re.search(chemical, token, flags=re.IGNORECASE)
-                    if (cmatch and (dmatch)) and (token not in filtered_tokens):
-                        # print(match.group())
-                        found_chemicals.append(chemical)
+                    if (cmatch and dmatch) and (token not in filtered_tokens):
 
-                        filtered_tokens.append(token)
-                        filtered_cooccur.append((cmatch.group(), dmatch.group()))
-                    elif (cmatch and (dmatch_cap)) and (token not in filtered_tokens):
-                        found_chemicals.append(chemical)
-                        filtered_tokens.append(token)
-                        filtered_cooccur.append((cmatch.group(), dmatch_cap.group()))
+                        # print(match.group())
+                            found_chemicals.append(chemical)
+
+                            filtered_tokens.append(token)
+                            filtered_cooccur.append((cmatch.group(), dmatch.group()))
 
                     else:
                         continue
@@ -133,16 +143,9 @@ def filter_sent(sent_dict, chemicals):
             filtered_coocur_freq[cooccur] = 1
         else:
             filtered_coocur_freq[cooccur] += 1
-    print("The frequency of all of unique co-occurrence is: ")
+    print("The frequency of all of co-occurrence (un-unique) is: ")
     print(filtered_coocur_freq)
     # print(sorted(filtered_coocur_freq, key=filtered_coocur_freq.__getitem__))
-    #
-    # print("The set of unique co-occureence is: ")
-    # print(set(filtered_cooccur))
-
-
-
-
 
     print(filtered_sent_dict)
     # print(filtered_sent_dict.keys())
