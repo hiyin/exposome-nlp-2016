@@ -230,18 +230,22 @@ def filtered_word_tokenizer(filtered_sent_dict):
 def extract_causation(extracted_relations):
     extracted_cause_dict = {}
     for pmid, sent_tokens in filtered_sent_dict.items():
-        extracted_cause = []
+        # extracted_cause = {}
         for token in sent_tokens:
             nonstop_words = [word for word in word_tokenize(token) if word not in stopwords.words('english')]
             pos_tagged_words = pos_tag(nonstop_words)
             # n = nltk.chunk.ne_chunk(pos_tagged_words)
             # n.draw()
             for word, tag in pos_tagged_words:
-                extracted_cause.append(word)
-        
-        extracted_cause_dict[pmid] = extracted_cause
+                if word not in extracted_cause_dict:
+                    extracted_cause_dict[word] = 1
+                else:
+                    extracted_cause_dict[word] +=1
+
     print("The extracted_cause_dict is: ")
     print(extracted_cause_dict)
+
+
     #         for chemical in chemicals:
     #             for disease in diseases:
     #                 if not disease.isupper():
