@@ -2,11 +2,14 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk import pos_tag
 from entrez_search import search, fetch_medline
 import re
+import inflect
+inflect = inflect.engine()
 
 import nltk
 # nltk.download('all', halt_on_error=False)
 # Solve above downloader issue https://github.com/nltk/nltk/issues/1283
 import pandas
+
 
 data = pandas.read_csv('/Users/dyin/Desktop/HaBIC/common_sql.csv', header=0)
 
@@ -22,10 +25,13 @@ agent_mesh = ["Acaricides",
 "Pesticide Synergists",
 "Rodenticides",
 "Pesticides"]
-chemicals = data["Chemical name"].tolist() + agent_mesh
+agent_mesh_stem = [inflect.singular_noun(mesh) for mesh in agent_mesh]
+
+chemicals = data["Chemical name"].tolist() + agent_mesh + agent_mesh_stem
+
 # chemicals = [chemical.lower() for chemical in chemicals] + ["pesticide"]
 
-results = search('Parkinson AND Pesticides')
+results = search("Parkinson disease[Mesh] OR Parkinsonian Disorders[Mesh]) AND Pesticides[Mesh]")
 id_list = results['IdList']
 records = fetch_medline(id_list)
 # Snomed_terms
@@ -81,7 +87,7 @@ def sent_tokenizer(record_dict):
 def filter_sent(sent_dict, chemicals):
     found_chemicals = []
     filtered_sent_dict = {}
-    filtered_cooccur = []
+
     for pmid, sent_tokens in sent_dict.items():
         filtered_tokens = []
         for token in sent_tokens:
@@ -93,21 +99,15 @@ def filter_sent(sent_dict, chemicals):
 
             for chemical in chemicals:
                 for disease in diseases:
-                    # # Method 2:
-                    # if not disease.isupper():
-                    #     continue
-                    # else:
-                    #     dmatch2 = re.search(r"\bdisease\b", token)
                     # Method 1 (prefered behaviour):
                     dmatch = re.search(disease, token, flags=re.IGNORECASE)
                     cmatch = re.search(chemical, token, flags=re.IGNORECASE)
                     if (cmatch and dmatch) and (token not in filtered_tokens):
 
                         # print(match.group())
-                            found_chemicals.append(chemical)
+                        found_chemicals.append(chemical)
+                        filtered_tokens.append(token)
 
-                            filtered_tokens.append(token)
-                            filtered_cooccur.append((cmatch.group(), dmatch.group()))
 
                     else:
                         continue
@@ -125,7 +125,6 @@ def filter_sent(sent_dict, chemicals):
         filtered_sent_dict[pmid] = filtered_tokens
 
     print(set(found_chemicals))
-    print("The number of co-occurence(s) is: %d with unique number: %d" % (len(filtered_cooccur), len(set(filtered_cooccur))))
 
 
     length_filteredsent = 0
@@ -137,15 +136,6 @@ def filter_sent(sent_dict, chemicals):
     print("The number of sentences after filtering is %s" % length_filteredsent)
     print("The number of PubMed literature after filtering is %s" % length_filteredarticle)
 
-    filtered_coocur_freq = {}
-    for cooccur in filtered_cooccur:
-        if cooccur not in filtered_coocur_freq:
-            filtered_coocur_freq[cooccur] = 1
-        else:
-            filtered_coocur_freq[cooccur] += 1
-    print("The frequency of all of co-occurrence (un-unique) is: ")
-    print(filtered_coocur_freq)
-    # print(sorted(filtered_coocur_freq, key=filtered_coocur_freq.__getitem__))
 
     print(filtered_sent_dict)
     # print(filtered_sent_dict.keys())
@@ -162,6 +152,7 @@ def match_word(input_string, string_list):
 
 def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
     extracted_phrase_dict = {}
+    filtered_cooccur = []
     for pmid, sent_tokens in filtered_sent_dict.items():
         extracted_phrase = []
         for token in sent_tokens:
@@ -178,13 +169,26 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
                     if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
                         if (not any(phrase in phrase1.group() for phrase in extracted_phrase)):
                             extracted_phrase.append(phrase1.group())
+                            filtered_cooccur.append((chemical, disease))
 
 
                     if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
                         if (not any(phrase in phrase2.group() for phrase in extracted_phrase)):
                             extracted_phrase.append(phrase2.group())
+                            filtered_cooccur.append((disease, chemical))
 
         extracted_phrase_dict[pmid] = extracted_phrase
+
+    print("The number of co-occurence(s) is: %d with unique number: %d" % (len(filtered_cooccur), len(set(filtered_cooccur))))
+
+    filtered_coocur_freq = {}
+    for cooccur in filtered_cooccur:
+        if cooccur not in filtered_coocur_freq:
+            filtered_coocur_freq[cooccur] = 1
+        else:
+            filtered_coocur_freq[cooccur] += 1
+    print("The frequency of all of co-occurrence (un-unique) is: ")
+    print(filtered_coocur_freq)
 
     length_extractedphrase = 0
     length_extractedarticle = 0
