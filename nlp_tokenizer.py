@@ -61,11 +61,16 @@ def filter_sent(sent_dict, chemicals):
 
             for chemical in chemicals:
                 for disease in diseases:
+                    # Method 2:
+                    if not disease.isupper():
+                        continue
+                    else:
+                        dmatch2 = re.search(r"\bdisease\b", token)
                     # Method 1 (prefered behaviour):
                     dmatch = re.search(disease, token, flags=re.IGNORECASE)
                     cmatch = re.search(chemical, token, flags=re.IGNORECASE)
 
-                    if (cmatch and (dmatch) and (token not in filtered_tokens):
+                    if (cmatch and (dmatch or dmatch2)) and (token not in filtered_tokens):
 
                         # print(match.group())
                             found_chemicals.append(chemical)
