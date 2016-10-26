@@ -171,7 +171,6 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
                             extracted_phrase.append(phrase1.group())
                             filtered_cooccur.append((chemical, disease))
 
-
                     if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
                         if (not any(phrase in phrase2.group() for phrase in extracted_phrase)):
                             extracted_phrase.append(phrase2.group())
@@ -202,20 +201,14 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
     print(extracted_phrase_dict)
     return extracted_phrase_dict
 
-def deduplicate(iterable):
-    for i in iterable:
-        return
 
 def word_tokenizer(record_dict):
     word_dict = {}
     for pmid, abstract in record_dict.items():
         word_dict[pmid] = word_tokenize(abstract)
     print(len(word_dict))
-    print(word_dict['23987116'])
+    # print(word_dict['23987116'])
     return word_dict
-
-
-
 
 
 def filtered_word_tokenizer(filtered_sent_dict):
@@ -232,9 +225,35 @@ def filtered_word_tokenizer(filtered_sent_dict):
 
 
 
+def extract_causation(extracted_relations):
+    extracted_cause_dict = {}
+    for pmid, sent_tokens in filtered_sent_dict.items():
+        extracted_cause = []
+        for token in sent_tokens:
+            tagged_word = pos_tag(word_tokenize(token))
+            for word, tag in tagged_word:
+                if re.match("VB", tag):
+                    extracted_cause.append(word)
 
-
-
+        extracted_cause_dict[pmid] = extracted_cause
+    print("The extracted_cause_dict is: ")
+    print(extracted_cause_dict)
+    #         for chemical in chemicals:
+    #             for disease in diseases:
+    #                 if not disease.isupper():
+    #                     cause1 = re.findall('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
+    #                     cause2 = re.findall('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
+    #                 else:
+    #                     cause1 = re.findall(r'%s(.*)\b%s\b' % (chemical, disease), token, flags=re.IGNORECASE)
+    #                     cause2 = re.findall(r'\b%s\b(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
+    #
+    #                 if (cause1 and (not any(cause1.group() in cause for cause in extracted_cause))):
+    #                         extracted_cause.append(cause1.group())
+    #
+    #                 if (cause2 and (not any(cause2.group() in cause for cause in extracted_cause))):
+    #                         extracted_cause.append(cause2.group())
+    #     extracted_cause_dict[pmid] = extracted_cause
+    # print(extracted_cause_dict)
 
 def pos_tagger(word_dict):
     postag_dict = {}
@@ -251,6 +270,26 @@ def entity_recognizer(postag_dict):
     print(entity_dict['23987116'])
     return entity_dict
 
+def remove_endwords(sent):
+    sent_no_endwords = (re.sub(r'''(?x)      # VERBOSE mode
+                 (             #
+                  ^            # start of string
+                  \w            # an alphanumeric character
+                 \S*           # zero-or-more non-space characters
+                 \s*           # followed by an alphanumeric character
+                  )
+                 |             # OR
+                 (
+                 \w            # an alphanumeric character
+                 \S*           # zero-or-more non-space characters
+                 \s*           # zero-or-more whitespaces
+                 $             # end of string
+                 )
+                 ''',
+            "",
+            sent))
+    return sent_no_endwords
+
 
 
 if __name__ == '__main__':
@@ -260,7 +299,7 @@ if __name__ == '__main__':
     filtered_sent_dict=filter_sent(sent_dict, chemicals)
     print("Start extracting relations")
     extracted_relations = extract_filtered_relation(filtered_sent_dict, chemicals, diseases)
-
+    extract_causation(extracted_relations)
 
     # Todo: Does word tokenizer necessary?
     # filtered_word_dict=filtered_word_tokenizer(extracted_relations)
