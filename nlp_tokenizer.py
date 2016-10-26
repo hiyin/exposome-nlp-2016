@@ -4,7 +4,7 @@ from entrez_search import search, fetch_medline
 import re
 import inflect
 from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer, WordNetLemmatizer
+from nltk.stem import WordNetLemmatizer
 inflect = inflect.engine()
 WNL = WordNetLemmatizer()
 import nltk
@@ -15,18 +15,19 @@ import operator
 
 data = pandas.read_csv('/Users/dyin/Desktop/HaBIC/common_sql.csv', header=0)
 
-agent_mesh = ["Acaricides",
-"Chemosterilants",
-"Fungicides",
-"Herbicides",
-"Defoliants",
-"Insect Repellents",
-"Insecticides",
-"Molluscacides",
-"Pesticide Residues",
-"Pesticide Synergists",
-"Rodenticides",
-"Pesticides"]
+agent_mesh = [
+    "Acaricides",
+    "Chemosterilants",
+    "Fungicides",
+    "Herbicides",
+    "Defoliants",
+    "Insect Repellents",
+    "Insecticides",
+    "Molluscacides",
+    "Pesticide Residues",
+    "Pesticide Synergists",
+    "Rodenticides",
+    "Pesticides"]
 agent_mesh_stem = [inflect.singular_noun(mesh) for mesh in agent_mesh]
 
 chemicals = data["Chemical name"].tolist() + agent_mesh + agent_mesh_stem
@@ -230,47 +231,31 @@ stop_words = set(stopwords.words('english'))
 
 stop_words.update(['.', ',', '"', "'", '?', '!', ':', ';', '(', ')', '[', ']', '{', '}']) # remove it if you need punctuation
 
-def extract_causation(extracted_relations):
+
+def extract_causation(extracted_relations_dict):
     extracted_cause_dict = {}
-    for pmid, sent_tokens in filtered_sent_dict.items():
+    for pmid, sent_tokens in extracted_relations_dict.items():
         # extracted_cause = {}
         for token in sent_tokens:
-            nonstop_words = [word for word in word_tokenize(token) if word not in stop_words]
-            pos_tagged_words = pos_tag(nonstop_words)
+            nonstop_words = [word for word in word_tokenize(token) if word.lower() not in stop_words]
             # n = nltk.chunk.ne_chunk(pos_tagged_words)
             # n.draw()
-            for word, tag in pos_tagged_words:
+            for word, tag in nonstop_words:
                 if WNL.lemmatize(word) not in extracted_cause_dict:
                     extracted_cause_dict[WNL.lemmatize(word)] = 1
                 else:
-                    extracted_cause_dict[WNL.lemmatize(word)] +=1
+                    extracted_cause_dict[WNL.lemmatize(word)] += 1
 
     return extracted_cause_dict
 
 
-    #         for chemical in chemicals:
-    #             for disease in diseases:
-    #                 if not disease.isupper():
-    #                     cause1 = re.findall('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
-    #                     cause2 = re.findall('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
-    #                 else:
-    #                     cause1 = re.findall(r'%s(.*)\b%s\b' % (chemical, disease), token, flags=re.IGNORECASE)
-    #                     cause2 = re.findall(r'\b%s\b(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
-    #
-    #                 if (cause1 and (not any(cause1.group() in cause for cause in extracted_cause))):
-    #                         extracted_cause.append(cause1.group())
-    #
-    #                 if (cause2 and (not any(cause2.group() in cause for cause in extracted_cause))):
-    #                         extracted_cause.append(cause2.group())
-    #     extracted_cause_dict[pmid] = extracted_cause
-    # print(extracted_cause_dict)
-
 def removekey(d):
     r = dict(d)
     for key, value in d.items():
-        if value <= 1:
+        if value <= 10:
            del r[key]
     return r
+
 
 def pos_tagger(word_dict):
     postag_dict = {}
@@ -286,28 +271,6 @@ def entity_recognizer(postag_dict):
         entity_dict[pmid] = nltk.chunk.ne_chunk(tagged_tokens)
     print(entity_dict['23987116'])
     return entity_dict
-
-def remove_endwords(sent):
-    sent_no_endwords = (re.sub(r'''(?x)      # VERBOSE mode
-                 (             #
-                  ^            # start of string
-                  \w            # an alphanumeric character
-                 \S*           # zero-or-more non-space characters
-                 \s*           # followed by an alphanumeric character
-                  )
-                 |             # OR
-                 (
-                 \w            # an alphanumeric character
-                 \S*           # zero-or-more non-space characters
-                 \s*           # zero-or-more whitespaces
-                 $             # end of string
-                 )
-                 ''',
-            "",
-            sent))
-    return sent_no_endwords
-
-
 
 if __name__ == '__main__':
     record_dict = transform(records)
