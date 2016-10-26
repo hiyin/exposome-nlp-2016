@@ -75,35 +75,26 @@ def sent_tokenizer(record_dict):
     return sent_dict
 
 def filter_sent(sent_dict, chemicals):
+    cregexes = '(?:%s)' % '|'.join(chemicals)
+    dregexes = '(?:%s)' % '|'.join(diseases)
     found_chemicals = []
     filtered_sent_dict = {}
-
+    flt_co_dict = {}
     for pmid, sent_tokens in sent_dict.items():
+        flt_co = []
         filtered_tokens = []
         for token in sent_tokens:
-
-            # match = re.search('parkinson+', token.lower)
-            # print('Detected match in' + match)
-            # ToDo: What about Parkinson abbrev e.g. PD, variation and implied associations etc
-            # if 'parkinson' in token.lower() or 'pesticide' in token.lower():
-
-            for chemical in chemicals:
-                for disease in diseases:
-                    # Method 1 (prefered behaviour):
-                    dmatch = re.search(disease, token, flags=re.IGNORECASE)
-                    cmatch = re.search(chemical, token, flags=re.IGNORECASE)
-                    if (cmatch and dmatch) and (token not in filtered_tokens):
-
-                        # print(match.group())
-                        found_chemicals.append(chemical)
-                        filtered_tokens.append(token)
-
-
-                    else:
-                        continue
+            dmatch = re.search(dregexes, token)
+            cmatch = re.search(cregexes, token, flags=re.IGNORECASE)
+            if (cmatch and dmatch) and (token not in filtered_tokens):
+                found_chemicals.append(cmatch.group(0))
+                filtered_tokens.append(token)
+                flt_co.append((dmatch.group(0), cmatch.group()))
+            else:
+                continue
 
         filtered_sent_dict[pmid] = filtered_tokens
-
+        flt_co_dict[pmid] = flt_co
     print("The following agent(s) are found in matched sentences: " + ', '.join(set(found_chemicals)))
 
 
@@ -118,12 +109,37 @@ def filter_sent(sent_dict, chemicals):
 
 
     print(filtered_sent_dict)
-    # print(filtered_sent_dict.keys())
-
-
+    co_freq_dict, sum_co_freq_dict = co_counter(flt_co_dict)
+    print("The frequency of all of co-occurrence (un-unique) is: ")
+    print(co_freq_dict)
+    print(sorted(sum_co_freq_dict.items(), key=operator.itemgetter(1)))
+    print("The total number of co-occurrence(s) is: %d with %d unique set of co-occurrence" % (sum(sum_co_freq_dict.values()), len(sum_co_freq_dict.keys())))
 
 
     return filtered_sent_dict
+
+def co_counter(flt_co_dict):
+    co_freq_dict = {}
+    for pmid, co_tups in flt_co_dict.items():
+        co_freq = {}
+        for co in co_tups:
+            if co not in co_freq:
+                co_freq[co] = 1
+            else:
+                co_freq[co] += 1
+
+        if pmid not in co_freq_dict:
+            co_freq_dict[pmid] = co_freq
+
+    sum_co_freq_dict = {}
+    for freq_dict in co_freq_dict.values():
+        for co, freq in freq_dict.items():
+            if co not in sum_co_freq_dict:
+                sum_co_freq_dict[co] = freq
+            else:
+                sum_co_freq_dict[co] += freq
+
+    return co_freq_dict,sum_co_freq_dict
 
 def match_word(input_string, string_list):
     words = re.findall(r'\w+', input_string)
@@ -135,7 +151,6 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
     cregexes = '(?:%s)' % '|'.join(chemicals)
     dregexes = '(?:%s)' % '|'.join(diseases)
     extracted_phrase_dict = {}
-    filtered_cooccur = []
     for pmid, sent_tokens in filtered_sent_dict.items():
         extracted_phrase = []
         for token in sent_tokens:
@@ -147,35 +162,9 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
             if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
                 if (not any(phrase in phrase2.group() for phrase in extracted_phrase)):
                     extracted_phrase.append(phrase2.group())
-                    # if not disease.isupper():
-                    #     phrase1 = re.search('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
-                    #     phrase2 = re.search('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
-                    # else:
-                    #     phrase1 = re.search(r'%s(.*)\b%s\b' % (chemical, disease), token, flags=re.IGNORECASE)
-                    #     phrase2 = re.search(r'\b%s\b(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
-                    # Eliminate duplicate/overlap phrases use any()
-                    # if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
-                    #     if (not any(phrase in phrase1.group() for phrase in extracted_phrase)):
-                    #         extracted_phrase.append(phrase1.group())
-                    #         filtered_cooccur.append((chemical, disease))
-                    #
-                    # if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
-                    #     if (not any(phrase in phrase2.group() for phrase in extracted_phrase)):
-                    #         extracted_phrase.append(phrase2.group())
-                    #         filtered_cooccur.append((disease, chemical))
 
         extracted_phrase_dict[pmid] = extracted_phrase
 
-    print("The number of co-occurence(s) is: %d with unique number: %d" % (len(filtered_cooccur), len(set(filtered_cooccur))))
-
-    filtered_coocur_freq = {}
-    for cooccur in filtered_cooccur:
-        if cooccur not in filtered_coocur_freq:
-            filtered_coocur_freq[cooccur] = 1
-        else:
-            filtered_coocur_freq[cooccur] += 1
-    print("The frequency of all of co-occurrence (un-unique) is: ")
-    print(filtered_coocur_freq)
 
     length_extractedphrase = 0
     length_extractedarticle = 0
