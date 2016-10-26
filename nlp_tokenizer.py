@@ -132,30 +132,37 @@ def match_word(input_string, string_list):
 
 
 def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
-    cregexes = "(" + ")|(".join(chemicals) + ")"
-    dregexes = "(" + ")|(".join(diseases) + ")"
+    cregexes = '(?:%s)' % '|'.join(chemicals)
+    dregexes = '(?:%s)' % '|'.join(diseases)
     extracted_phrase_dict = {}
     filtered_cooccur = []
     for pmid, sent_tokens in filtered_sent_dict.items():
         extracted_phrase = []
         for token in sent_tokens:
-            
-                    if not disease.isupper():
-                        phrase1 = re.search('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
-                        phrase2 = re.search('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
-                    else:
-                        phrase1 = re.search(r'%s(.*)\b%s\b' % (chemical, disease), token, flags=re.IGNORECASE)
-                        phrase2 = re.search(r'\b%s\b(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
+            phrase1 = re.search('%s(.*)%s' % (cregexes, dregexes), token, flags=re.IGNORECASE)
+            phrase2 = re.search('%s(.*)%s' % (dregexes, cregexes), token, flags=re.IGNORECASE)
+            if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
+                if (not any(phrase in phrase1.group() for phrase in extracted_phrase)):
+                    extracted_phrase.append(phrase1.group())
+            if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
+                if (not any(phrase in phrase2.group() for phrase in extracted_phrase)):
+                    extracted_phrase.append(phrase2.group())
+                    # if not disease.isupper():
+                    #     phrase1 = re.search('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
+                    #     phrase2 = re.search('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
+                    # else:
+                    #     phrase1 = re.search(r'%s(.*)\b%s\b' % (chemical, disease), token, flags=re.IGNORECASE)
+                    #     phrase2 = re.search(r'\b%s\b(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
                     # Eliminate duplicate/overlap phrases use any()
-                    if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
-                        if (not any(phrase in phrase1.group() for phrase in extracted_phrase)):
-                            extracted_phrase.append(phrase1.group())
-                            filtered_cooccur.append((chemical, disease))
-
-                    if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
-                        if (not any(phrase in phrase2.group() for phrase in extracted_phrase)):
-                            extracted_phrase.append(phrase2.group())
-                            filtered_cooccur.append((disease, chemical))
+                    # if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
+                    #     if (not any(phrase in phrase1.group() for phrase in extracted_phrase)):
+                    #         extracted_phrase.append(phrase1.group())
+                    #         filtered_cooccur.append((chemical, disease))
+                    #
+                    # if (phrase2 and (not any(phrase2.group() in phrase for phrase in extracted_phrase))):
+                    #     if (not any(phrase in phrase2.group() for phrase in extracted_phrase)):
+                    #         extracted_phrase.append(phrase2.group())
+                    #         filtered_cooccur.append((disease, chemical))
 
         extracted_phrase_dict[pmid] = extracted_phrase
 
