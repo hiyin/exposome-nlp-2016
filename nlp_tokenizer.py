@@ -1,67 +1,53 @@
 from nltk.tokenize import sent_tokenize, word_tokenize
+import nltk.data
 from nltk import pos_tag
 from entrez_search import search, fetch_medline
 import re
 import inflect
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+import nltk
+from nltk.tokenize import WordPunctTokenizer
+punctword_tokenizer = WordPunctTokenizer()
 inflect = inflect.engine()
 WNL = WordNetLemmatizer()
-import nltk
 # nltk.download('all', halt_on_error=False)
 # Solve above downloader issue https://github.com/nltk/nltk/issues/1283
 import pandas
 import operator
+pickle_tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
-data = pandas.read_csv('/Users/dyin/Desktop/HaBIC/common_sql.csv', header=0)
+stop_words = set(stopwords.words('english'))
+stop_words.update(['.', ',', '"', "'", '?', '!', ':', ';', '(', ')', '[', ']', '{', '}', '%']) # remove it if you need punctuation
 
-agent_mesh = [
-    "Acaricides",
-    "Chemosterilants",
-    "Fungicides",
-    "Herbicides",
-    "Defoliants",
-    "Insect Repellents",
-    "Insecticides",
-    "Molluscacides",
-    "Pesticide Residues",
-    "Pesticide Synergists",
-    "Rodenticides",
-    "Pesticides"]
-agent_mesh_stem = [inflect.singular_noun(mesh) for mesh in agent_mesh]
+# results = search("ultraviolet rays[MeSH Terms] AND osteoporosis[MeSH Terms]")
+def initialize_data(topic):
+    if topic == "OP":
+        results = search("(Ultraviolet rays[MeSH Terms] OR Sunlight[Mesh]) AND (osteoporosis[MeSH Terms] OR osteoporosis, postmenopausal[MeSH Terms])")
+        records = fetch_medline(results['IdList'])
 
-chemicals = data["Chemical name"].tolist() + agent_mesh + agent_mesh_stem
+        agent_mesh = ["Ultraviolet Rays","Ultra-Violet Rays","Ultra-Violet Rays","Ultra Violet Rays","Actinic Rays",
+                      "Ultraviolet Light","Ultraviolet","UV Light","UV","Black Lights","Ultraviolet Black Lights"]
+        expanded_terms = ["Sun", "Sunshine", "Sunlight", "Ultraviolet Radiation", "UVA", "UVB", "Ultraviolet A", "Ultraviolet B"]
+        chemicals = agent_mesh + [mesh.rstrip("s") for mesh in agent_mesh] + expanded_terms
+        diseases = ["Osteoporosis","Osteoporosis, NOS","OP"]
+    if topic == "PD":
+        data = pandas.read_csv('/Users/dyin/Desktop/HaBIC/common_sql.csv', header=0)
 
-# chemicals = [chemical.lower() for chemical in chemicals] + ["pesticide"]
+        agent_mesh = ["Acaricides", "Chemosterilants", "Fungicides", "Herbicides", "Defoliants", "Insect Repellents",
+                      "Insecticides", "Molluscacides", "Pesticide Residues", "Pesticide Synergists", "Rodenticides",
+                      "Pesticides"]
+        chemicals = data["Chemical name"].tolist() + agent_mesh + [inflect.singular_noun(mesh) for mesh in agent_mesh]
 
-results = search("Parkinson disease[Mesh] OR Parkinsonian Disorders[Mesh]) AND Pesticides[Mesh]")
-id_list = results['IdList']
-records = fetch_medline(id_list)
-# Snomed_terms
+        results = search("(Parkinson disease[Mesh] OR Parkinsonian Disorders[Mesh]) AND Pesticides[Mesh]")
+        records = fetch_medline(results['IdList'])
 
-subdisease = [
-    "Juvenile Parkinson disease",
-    "Juvenile Parkinson's disease",
-    "Juvenile Parkinson's disease (disorder)",
-    "Parkinsonism with orthostatic hypotension",
-    "Parkinsonism with orthostatic hypotension (disorder)"]
-diseases = [
-    "Idiopathic Parkinson's disease"
-    "Parkinson disease",
-    "PD",
-    "Parkinson's disease",
-    "Parkinsons disease",
-    "Primary Parkinsonism",
-    "Idiopathic Parkinsonism",
-    "Parkinson's disease (disorder)",
-    "Parkinson's disease, NOS",
-    "Paralysis agitans",
-    "Idiopathic parkinsonism",
-    "Primary parkinsonism",
-    "Shaking palsy"] + subdisease
+        diseases = ["Idiopathic Parkinson's disease", "Parkinson disease", "PD", "Parkinson's disease",
+                    "Parkinsons disease", "Primary Parkinsonism", "Idiopathic Parkinsonism", "Parkinson's disease (disorder)",
+                    "Parkinson's disease, NOS", "Paralysis agitans", "Idiopathic parkinsonism", "Primary parkinsonism", "Shaking palsy"]
 
+    return records, chemicals, diseases
 
-# diseases = ["PD", "parkinson", "parkin"] # becare of "updated"
 def transform(records):
     record_dict = {}
     for i, record in enumerate(records):
@@ -115,19 +101,9 @@ def filter_sent(sent_dict, chemicals):
                     else:
                         continue
 
-
-            # if (any(chemical in token for chemical in chemicals))
-            # for chemical in chemicals:
-            #     if chemical in token.lower():
-            #         print("Chemicals %s detected in sentence" % chemical)
-            #         key_token = token
-            #     else:
-            #         continue
-            #     filtered_tokens.append(key_token)
-
         filtered_sent_dict[pmid] = filtered_tokens
 
-    print(set(found_chemicals))
+    print("The following agent(s) are found in matched sentences: " + ', '.join(set(found_chemicals)))
 
 
     length_filteredsent = 0
@@ -226,21 +202,15 @@ def filtered_word_tokenizer(filtered_sent_dict):
     print(filtered_word_dict)
     return filtered_word_dict
 
-
-stop_words = set(stopwords.words('english'))
-
-stop_words.update(['.', ',', '"', "'", '?', '!', ':', ';', '(', ')', '[', ']', '{', '}']) # remove it if you need punctuation
-
-
 def extract_causation(extracted_relations_dict):
     extracted_cause_dict = {}
     for pmid, sent_tokens in extracted_relations_dict.items():
         # extracted_cause = {}
         for token in sent_tokens:
-            nonstop_words = [word for word in word_tokenize(token) if word.lower() not in stop_words]
+            nonstop_words = [word for word in punctword_tokenizer.tokenize(token) if word.lower() not in stop_words]
             # n = nltk.chunk.ne_chunk(pos_tagged_words)
             # n.draw()
-            for word, tag in nonstop_words:
+            for word in nonstop_words:
                 if WNL.lemmatize(word) not in extracted_cause_dict:
                     extracted_cause_dict[WNL.lemmatize(word)] = 1
                 else:
@@ -251,8 +221,12 @@ def extract_causation(extracted_relations_dict):
 
 def removekey(d):
     r = dict(d)
+    if len(d) < 100:
+        cutoff = 0
+    else:
+        cutoff = 10
     for key, value in d.items():
-        if value <= 10:
+        if value < cutoff:
            del r[key]
     return r
 
@@ -273,6 +247,7 @@ def entity_recognizer(postag_dict):
     return entity_dict
 
 if __name__ == '__main__':
+    records, chemicals, diseases = initialize_data("PD")
     record_dict = transform(records)
     sent_dict = sent_tokenizer(record_dict)
     print("Start filtering sentence")
