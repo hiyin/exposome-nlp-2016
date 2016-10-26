@@ -65,7 +65,7 @@ def filter_sent(sent_dict, chemicals):
                     dmatch = re.search(disease, token, flags=re.IGNORECASE)
                     cmatch = re.search(chemical, token, flags=re.IGNORECASE)
 
-                    if (cmatch and dmatch) and (token not in filtered_tokens):
+                    if (cmatch and (dmatch) and (token not in filtered_tokens):
 
                         # print(match.group())
                             found_chemicals.append(chemical)
