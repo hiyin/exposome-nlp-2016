@@ -15,8 +15,22 @@ chemicals = [chemical.lower() for chemical in chemicals] + ["pesticide"]
 results = search('Parkinson AND Pesticide')
 id_list = results['IdList']
 records = fetch_medline(id_list)
-
-diseases = ["PD", "parkinson", "parkin"] # becare of "updated"
+# Snomed_terms
+diseases = [
+    "Idiopathic Parkinson's disease"
+    "Parkinson disease",
+    "PD",
+    "Parkinson's disease",
+    "Parkinsons disease",
+    "Primary Parkinsonism",
+    "Idiopathic Parkinsonism",
+    "Parkinson's disease (disorder)",
+    "Parkinson's disease, NOS",
+    "Paralysis agitans",
+    "Idiopathic parkinsonism",
+    "Primary parkinsonism",
+    "Shaking palsy"]
+# diseases = ["PD", "parkinson", "parkin"] # becare of "updated"
 # diseases = ["parkinson", "parkin"]
 
 
