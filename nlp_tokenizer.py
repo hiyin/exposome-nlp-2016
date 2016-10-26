@@ -6,12 +6,12 @@ import inflect
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 inflect = inflect.engine()
-lemmatize = WordNetLemmatizer()
+WNL = WordNetLemmatizer()
 import nltk
 # nltk.download('all', halt_on_error=False)
 # Solve above downloader issue https://github.com/nltk/nltk/issues/1283
 import pandas
-
+import operator
 
 data = pandas.read_csv('/Users/dyin/Desktop/HaBIC/common_sql.csv', header=0)
 
@@ -226,24 +226,26 @@ def filtered_word_tokenizer(filtered_sent_dict):
     return filtered_word_dict
 
 
+stop_words = set(stopwords.words('english'))
+
+stop_words.update(['.', ',', '"', "'", '?', '!', ':', ';', '(', ')', '[', ']', '{', '}']) # remove it if you need punctuation
 
 def extract_causation(extracted_relations):
     extracted_cause_dict = {}
     for pmid, sent_tokens in filtered_sent_dict.items():
         # extracted_cause = {}
         for token in sent_tokens:
-            nonstop_words = [word for word in word_tokenize(token) if word not in stopwords.words('english')]
+            nonstop_words = [word for word in word_tokenize(token) if word not in stop_words]
             pos_tagged_words = pos_tag(nonstop_words)
             # n = nltk.chunk.ne_chunk(pos_tagged_words)
             # n.draw()
             for word, tag in pos_tagged_words:
-                if word not in extracted_cause_dict:
-                    extracted_cause_dict[word] = 1
+                if WNL.lemmatize(word) not in extracted_cause_dict:
+                    extracted_cause_dict[WNL.lemmatize(word)] = 1
                 else:
-                    extracted_cause_dict[word] +=1
+                    extracted_cause_dict[WNL.lemmatize(word)] +=1
 
-    print("The extracted_cause_dict is: ")
-    print(extracted_cause_dict)
+    return extracted_cause_dict
 
 
     #         for chemical in chemicals:
@@ -262,6 +264,13 @@ def extract_causation(extracted_relations):
     #                         extracted_cause.append(cause2.group())
     #     extracted_cause_dict[pmid] = extracted_cause
     # print(extracted_cause_dict)
+
+def removekey(d):
+    r = dict(d)
+    for key, value in d.items():
+        if value <= 1:
+           del r[key]
+    return r
 
 def pos_tagger(word_dict):
     postag_dict = {}
@@ -307,7 +316,10 @@ if __name__ == '__main__':
     filtered_sent_dict=filter_sent(sent_dict, chemicals)
     print("Start extracting relations")
     extracted_relations = extract_filtered_relation(filtered_sent_dict, chemicals, diseases)
-    extract_causation(extracted_relations)
+    extracted_causes = extract_causation(extracted_relations)
+    frequent_causes = removekey(extracted_causes)
+    sorted_causes = sorted(frequent_causes.items(), key=operator.itemgetter(1))
+    print(sorted_causes)
 
     # Todo: Does word tokenizer necessary?
     # filtered_word_dict=filtered_word_tokenizer(extracted_relations)
