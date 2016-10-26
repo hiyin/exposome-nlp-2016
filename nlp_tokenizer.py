@@ -24,14 +24,14 @@ stop_words.update(['.', ',', '"', "'", '?', '!', ':', ';', '(', ')', '[', ']', '
 # results = search("ultraviolet rays[MeSH Terms] AND osteoporosis[MeSH Terms]")
 def initialize_data(topic):
     if topic == "OP":
-        results = search("(Ultraviolet rays[MeSH Terms] OR Sunlight[Mesh]) AND (osteoporosis[MeSH Terms] OR osteoporosis, postmenopausal[MeSH Terms])")
+        results = search("(Ultraviolet rays[MeSH Terms] OR Sunlight[Mesh]) AND (osteoporosis[MeSH Terms]")
         records = fetch_medline(results['IdList'])
 
         agent_mesh = ["Ultraviolet Rays","Ultra-Violet Rays","Ultra-Violet Rays","Ultra Violet Rays","Actinic Rays",
                       "Ultraviolet Light","Ultraviolet","UV Light","UV","Black Lights","Ultraviolet Black Lights"]
         expanded_terms = ["Sun", "Sunshine", "Sunlight", "Ultraviolet Radiation", "UVA", "UVB", "Ultraviolet A", "Ultraviolet B"]
         chemicals = agent_mesh + [mesh.rstrip("s") for mesh in agent_mesh] + expanded_terms
-        diseases = ["Osteoporosis","Osteoporosis, NOS","OP"]
+        diseases = ["Osteoporosis","osteoporosis, NOS", "Osteoporoses"]
     if topic == "PD":
         data = pandas.read_csv('/Users/dyin/Desktop/HaBIC/common_sql.csv', header=0)
 
@@ -74,9 +74,10 @@ def sent_tokenizer(record_dict):
     # print(len(sent_dict))
     return sent_dict
 
-def filter_sent(sent_dict, chemicals):
-    cregexes = '(?:%s)' % '|'.join(chemicals)
+def filter_sent(sent_dict, chemicals, diseases):
     dregexes = '(?:%s)' % '|'.join(diseases)
+    cregexes = '(?:%s)' % '|'.join(chemicals)
+
     found_chemicals = []
     filtered_sent_dict = {}
     flt_co_dict = {}
@@ -84,9 +85,10 @@ def filter_sent(sent_dict, chemicals):
         flt_co = []
         filtered_tokens = []
         for token in sent_tokens:
-            dmatch = re.search(dregexes, token)
+            dmatch = re.search(dregexes, token) ## Turn down for PD
             cmatch = re.search(cregexes, token, flags=re.IGNORECASE)
-            if (cmatch and dmatch) and (token not in filtered_tokens):
+
+            if ((cmatch) and (dmatch)) and (token not in filtered_tokens):
                 found_chemicals.append(cmatch.group(0))
                 filtered_tokens.append(token)
                 flt_co.append((dmatch.group(0), cmatch.group()))
@@ -249,7 +251,7 @@ if __name__ == '__main__':
     record_dict = transform(records)
     sent_dict = sent_tokenizer(record_dict)
     print("Start filtering sentence")
-    filtered_sent_dict=filter_sent(sent_dict, chemicals)
+    filtered_sent_dict=filter_sent(sent_dict, chemicals, diseases)
     print("Start extracting relations")
     extracted_relations = extract_filtered_relation(filtered_sent_dict, chemicals, diseases)
     extracted_causes = extract_causation(extracted_relations)
