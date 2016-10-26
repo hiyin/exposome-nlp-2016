@@ -3,6 +3,7 @@ from nltk import pos_tag
 from entrez_search import search, fetch_medline
 import re
 import inflect
+from nltk.corpus import stopwords
 inflect = inflect.engine()
 
 import nltk
@@ -230,9 +231,12 @@ def extract_causation(extracted_relations):
     for pmid, sent_tokens in filtered_sent_dict.items():
         extracted_cause = []
         for token in sent_tokens:
-            tagged_word = pos_tag(word_tokenize(token))
+            nonstop_words = [word for word in word_tokenize(token) if word not in stopwords.words('english')]
+            tagged_word = pos_tag(nonstop_words)
+            print(tagged_word)
             for word, tag in tagged_word:
                 if re.match("VB", tag):
+
                     extracted_cause.append(word)
 
         extracted_cause_dict[pmid] = extracted_cause
