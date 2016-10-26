@@ -61,16 +61,17 @@ def filter_sent(sent_dict, chemicals):
 
             for chemical in chemicals:
                 for disease in diseases:
-                    # Method 2:
-                    if not disease.isupper():
-                        continue
-                    else:
-                        dmatch2 = re.search(r"\bdisease\b", token)
+                    # # Method 2:
+                    # if not disease.isupper():
+                    #     continue
+                    # else:
+                    #     dmatch2 = re.search(r"\bdisease\b", token)
                     # Method 1 (prefered behaviour):
                     dmatch = re.search(disease, token, flags=re.IGNORECASE)
                     cmatch = re.search(chemical, token, flags=re.IGNORECASE)
 
-                    if (cmatch and (dmatch or dmatch2)) and (token not in filtered_tokens):
+                    if (cmatch and dmatch) and (token not in filtered_tokens):
+
 
                         # print(match.group())
                             found_chemicals.append(chemical)
@@ -133,9 +134,6 @@ def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
                         phrase1 = re.search(r'%s(.*)\b%s\b' % (chemical, disease), token, flags=re.IGNORECASE)
                         phrase2 = re.search(r'\b%s\b(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
                     # Eliminate duplicate/overlap phrases use any()
-                    if phrase2 and "PDP" in phrase2.group():
-                        print(phrase2.group())
-
                     if (phrase1 and (not any(phrase1.group() in phrase for phrase in extracted_phrase))):
                         if (not any(phrase in phrase1.group() for phrase in extracted_phrase)):
                             extracted_phrase.append(phrase1.group())
