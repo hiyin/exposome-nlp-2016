@@ -130,15 +130,16 @@ def match_word(input_string, string_list):
     return [True for word in words if word in string_list]
 
 
+
 def extract_filtered_relation(filtered_sent_dict, chemicals, diseases):
+    cregexes = "(" + ")|(".join(chemicals) + ")"
+    dregexes = "(" + ")|(".join(diseases) + ")"
     extracted_phrase_dict = {}
     filtered_cooccur = []
     for pmid, sent_tokens in filtered_sent_dict.items():
         extracted_phrase = []
         for token in sent_tokens:
-            for chemical in chemicals:
-                for disease in diseases:
-
+            
                     if not disease.isupper():
                         phrase1 = re.search('%s(.*)%s' % (chemical, disease), token, flags=re.IGNORECASE)
                         phrase2 = re.search('%s(.*)%s' % (disease, chemical), token, flags=re.IGNORECASE)
