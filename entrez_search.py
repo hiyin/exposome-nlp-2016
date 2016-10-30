@@ -2,8 +2,8 @@
 
 from Bio import Entrez
 from Bio import Medline
-SEARCH_QUERY='Parkinson AND Pesticide'
-MAX_RETURN='100'
+# SEARCH_QUERY='Parkinson AND Pesticide'
+MAX_RETURN='300'
 
 def search(query):
     Entrez.email = 'your.email@example.com'
@@ -15,7 +15,7 @@ def search(query):
                             maxdate='2016/08',
                             term=query)
     results = Entrez.read(handle)
-    print('Total number of publications containing {0}: {1}'.format(SEARCH_QUERY, results['Count']))
+    print('Total number of publications containing {0}: {1}'.format(query, results['Count']))
     return results
 
 def fetch_details(id_list):
@@ -37,13 +37,14 @@ def fetch_medline(id_list):
      return results
 
 if __name__ == '__main__':
-    search_query = '(Parkinson disease[Mesh] OR Parkinsonian Disorders[Mesh]) AND Pesticides[Mesh]'
-    results = search(SEARCH_QUERY) # search_query = 'Parkinson AND Pesticide'
+    search_query = ""
+    results = search(search_query) # search_query = 'Parkinson AND Pesticide'
     id_list = results['IdList']
     papers = fetch_details(id_list)
 
     records = fetch_medline(id_list)
 
+    print("Printing abstracts...")
     for i, paper in enumerate(papers):
         print("%d) %s" % (i+1, paper['MedlineCitation']['Article']['ArticleTitle']))
     # Pretty print the first paper in full
@@ -52,3 +53,4 @@ if __name__ == '__main__':
     for i, record in enumerate(records):
         if 'AB' in record.keys():
             print("%d) %s" % (i+1, record['AB']))
+

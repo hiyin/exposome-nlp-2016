@@ -15,6 +15,7 @@ WNL = WordNetLemmatizer()
 # Solve above downloader issue https://github.com/nltk/nltk/issues/1283
 import pandas
 import operator
+from word_cloud import draw_wordcloud
 pickle_tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
 stop_words = set(stopwords.words('english'))
@@ -24,16 +25,16 @@ stop_words.update(['.', ',', '"', "'", '?', '!', ':', ';', '(', ')', '[', ']', '
 # results = search("ultraviolet rays[MeSH Terms] AND osteoporosis[MeSH Terms]")
 def initialize_data(topic):
     if topic == "OP":
-        results = search("(Ultraviolet rays[MeSH Terms] OR Sunlight[Mesh]) AND (osteoporosis[MeSH Terms]")
+        results = search("(Ultraviolet rays[MeSH Terms] OR Sunlight[Mesh]) AND (Osteoporosis[MeSH Terms]")
         records = fetch_medline(results['IdList'])
 
         agent_mesh = ["Ultraviolet Rays","Ultra-Violet Rays","Ultra-Violet Rays","Ultra Violet Rays","Actinic Rays",
                       "Ultraviolet Light","Ultraviolet","UV Light","UV","Black Lights","Ultraviolet Black Lights"]
         expanded_terms = ["Sun", "Sunshine", "Sunlight", "Ultraviolet Radiation", "UVA", "UVB", "Ultraviolet A", "Ultraviolet B"]
         chemicals = agent_mesh + [mesh.rstrip("s") for mesh in agent_mesh] + expanded_terms
-        diseases = ["Osteoporosis","osteoporosis, NOS", "Osteoporoses"]
+        diseases = ["osteoporosis","osteoporosis, NOS", "osteoporoses"]
     if topic == "PD":
-        data = pandas.read_csv('/Users/dyin/Desktop/HaBIC/common_sql.csv', header=0)
+        data = pandas.read_csv('/Users/dyin/Desktop/Semester 2/HaBIC/common_sql.csv', header=0)
 
         agent_mesh = ["Acaricides", "Chemosterilants", "Fungicides", "Herbicides", "Defoliants", "Insect Repellents",
                       "Insecticides", "Molluscacides", "Pesticide Residues", "Pesticide Synergists", "Rodenticides",
@@ -68,20 +69,26 @@ def transform(records):
 def sent_tokenizer(record_dict):
     sent_dict = {}
     sent_tokenize = nltk.data.load('tokenizers/punkt/english.pickle')
+    join_sent = ''
     for pmid, abstract in record_dict.items():
-        print(pmid, abstract)
-        sent_dict[pmid] = sent_tokenize.tokenize(abstract) # {'pmid1': [sentence tokens],  'pmid2': [...]}
+        # print(pmid, abstract)
+        sent_dict[pmid] = sent_tokenize.tokenize(abstract)
+        join_sent = join_sent + abstract
+
     # print(len(sent_dict))
+    draw_wordcloud(join_sent)
     return sent_dict
 
 def filter_sent(sent_dict, chemicals, diseases):
     dregexes = '(?:%s)' % '|'.join(diseases)
     cregexes = '(?:%s)' % '|'.join(chemicals)
-
+    print(cregexes)
+    sum_sent = 0
     found_chemicals = []
     filtered_sent_dict = {}
     flt_co_dict = {}
     for pmid, sent_tokens in sent_dict.items():
+        total_sent = len(sent_tokens)
         flt_co = []
         filtered_tokens = []
         for token in sent_tokens:
@@ -91,10 +98,10 @@ def filter_sent(sent_dict, chemicals, diseases):
             if ((cmatch) and (dmatch)) and (token not in filtered_tokens):
                 found_chemicals.append(cmatch.group(0))
                 filtered_tokens.append(token)
-                flt_co.append((dmatch.group(0), cmatch.group()))
+                flt_co.append((dmatch.group(0), cmatch.group(0)))
             else:
                 continue
-
+        sum_sent += total_sent
         filtered_sent_dict[pmid] = filtered_tokens
         flt_co_dict[pmid] = flt_co
     print("The following agent(s) are found in matched sentences: " + ', '.join(set(found_chemicals)))
@@ -106,6 +113,9 @@ def filter_sent(sent_dict, chemicals, diseases):
         if filtered_sent != []:
             length_filteredsent += len(filtered_sent)
             length_filteredarticle += 1
+
+
+    print("The total number of unfiltered sentences is %s" % sum_sent)
     print("The number of sentences after filtering is %s" % length_filteredsent)
     print("The number of PubMed literature after filtering is %s" % length_filteredarticle)
 
@@ -203,18 +213,51 @@ def filtered_word_tokenizer(filtered_sent_dict):
     return filtered_word_dict
 
 def extract_causation(extracted_relations_dict):
+    cregexes = '(?:%s)' % '|'.join(chemicals)
+    dregexes = '(?:%s)' % '|'.join(diseases)
     extracted_cause_dict = {}
+    extracted_causative_phrase = {}
+    causative_phrases_freq = {}
     for pmid, sent_tokens in extracted_relations_dict.items():
+        causative_phrases = []
         for token in sent_tokens:
             # Trial new puctword tokenizer to avoid "'s" occurences
             nonstop_words = [word for word in punctword_tokenizer.tokenize(token) if word.lower() not in stop_words]
-            # n = nltk.chunk.ne_chunk(pos_tagged_words)
+            # n = nltk.chunk.ne_chunk(pos_tag(nonstop_words))
             # n.draw()
             for word in nonstop_words:
                 if WNL.lemmatize(word) not in extracted_cause_dict:
                     extracted_cause_dict[WNL.lemmatize(word)] = 1
                 else:
                     extracted_cause_dict[WNL.lemmatize(word)] += 1
+
+
+            causative_phrase = re.search(r"(associated|associated with|cause[sd]|association|risk)", token)
+            if causative_phrase:
+                causative_phrases.append(causative_phrase.group())
+
+        extracted_causative_phrase[pmid] = causative_phrases
+    print("The extracted phrases are: ")
+    print(extracted_causative_phrase)
+
+    unique_causes_freq = {}
+    num_paper_has = 0
+    for pmid, phrases in extracted_causative_phrase.items():
+        if phrases != []:
+            num_causes = len(phrases)
+            num_paper_has += 1
+        for phrase in phrases:
+            if phrase not in unique_causes_freq:
+                unique_causes_freq[phrase] = num_causes
+            else:
+                unique_causes_freq[phrase] += num_causes
+
+    print("The number of papers has shown real causative words is %s, and the freq of extracted phrases are: "% num_paper_has)
+    print(unique_causes_freq)
+
+
+
+
 
     return extracted_cause_dict
 
@@ -247,12 +290,13 @@ def entity_recognizer(postag_dict):
     return entity_dict
 
 if __name__ == '__main__':
-    records, chemicals, diseases = initialize_data("PD")
+    print("Start collecting data")
+    records, chemicals, diseases = initialize_data("OP")
     record_dict = transform(records)
     sent_dict = sent_tokenizer(record_dict)
     print("Start filtering sentence")
     filtered_sent_dict=filter_sent(sent_dict, chemicals, diseases)
-    print("Start extracting relations")
+    print("Start identifying entities and extracting relations")
     extracted_relations = extract_filtered_relation(filtered_sent_dict, chemicals, diseases)
     extracted_causes = extract_causation(extracted_relations)
     frequent_causes = removekey(extracted_causes)
